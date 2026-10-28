@@ -1,0 +1,28 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# PHP Legacy Project (Do not deploy)
+QuanLyKhachSan/
+
+# Environment Variables & Local Config
+.env
+*.local
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3-journal
+
+# IDEs
+.vscode/
+.vs/
+.idea/
+
+# OS Files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
