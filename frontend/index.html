@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Khách Sạn - Hotel Admin</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 6 Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 for beautiful popups -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- SIDEBAR -->
+        <div class="col-md-3 col-lg-2 px-0 sidebar d-none d-md-block">
+            <div class="brand">
+                <i class="fa-solid fa-hotel text-info"></i>
+                <span>HOTEL ADMIN</span>
+            </div>
+            <div class="nav flex-column mt-3">
+                <a class="nav-link active" onclick="switchSection('dashboard')">
+                    <i class="fa-solid fa-grip"></i> Sơ Đồ Phòng
+                </a>
+                <a class="nav-link" onclick="switchSection('rentals')">
+                    <i class="fa-solid fa-calendar-check"></i> Đặt & Thuê Phòng
+                </a>
+                <a class="nav-link" onclick="switchSection('invoices')">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Hóa Đơn & Thu Tiền
+                </a>
+                <a class="nav-link" onclick="switchSection('services')">
+                    <i class="fa-solid fa-concierge-bell"></i> Dịch Vụ Khách Sạn
+                </a>
+                <a class="nav-link" onclick="switchSection('customers')">
+                    <i class="fa-solid fa-users"></i> Quản Lý Khách Hàng
+                </a>
+                <a class="nav-link" onclick="switchSection('reports')">
+                    <i class="fa-solid fa-chart-line"></i> Báo Cáo Doanh Thu
+                </a>
+                <hr class="border-secondary mx-3 my-2">
+                <a href="booking.html" class="nav-link text-warning" target="_blank">
+                    <i class="fa-solid fa-globe"></i> Trang Khách Đặt Phòng
+                </a>
+                <a href="/docs" class="nav-link text-info" target="_blank">
+                    <i class="fa-solid fa-book-open"></i> Swagger API Docs
+                </a>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="col-md-9 col-lg-10 main-content">
+            <!-- TOP BAR -->
+            <div class="top-bar">
+                <div>
+                    <h4 class="m-0 fw-bold text-dark" id="page-title">Sơ Đồ Phòng</h4>
+                    <span class="text-muted small">Cơ sở dữ liệu: Microsoft SQL Server (QuanLyKhachSan)</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge bg-primary px-3 py-2 fs-6">
+                        <i class="fa-solid fa-user-gear me-1"></i> Lễ Tân: Nguyễn Thị Hoa (NV01)
+                    </span>
+                    <button class="btn btn-sm btn-outline-danger" onclick="logout()">
+                        <i class="fa-solid fa-right-from-bracket me-1"></i> Đăng xuất
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECTION 1: SƠ ĐỒ PHÒNG (DASHBOARD) -->
+            <div id="section-dashboard" class="content-section">
+                <!-- KPI CARDS -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-xl-3">
+                        <div class="stat-card card-all" onclick="filterRooms('all')">
+                            <div class="text-muted small fw-semibold">Tổng số phòng</div>
+                            <div class="fs-2 fw-bold text-dark" id="kpi-total-rooms">30</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <div class="stat-card card-trong" onclick="filterRooms('Trống')">
+                            <div class="text-muted small fw-semibold">Phòng trống</div>
+                            <div class="fs-2 fw-bold text-success" id="kpi-empty-rooms">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <div class="stat-card card-thue" onclick="filterRooms('Đang thuê')">
+                            <div class="text-muted small fw-semibold">Đang có khách</div>
+                            <div class="fs-2 fw-bold text-danger" id="kpi-rented-rooms">0</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <div class="stat-card card-don" onclick="filterRooms('Đang dọn')">
+                            <div class="text-muted small fw-semibold">Đang dọn / Bảo trì</div>
+                            <div class="fs-2 fw-bold text-warning" id="kpi-cleaning-rooms">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FILTER BAR -->
+                <div class="card border-0 shadow-sm p-3 mb-4">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <strong class="me-2 text-secondary"><i class="fa-solid fa-filter me-1"></i>Lọc phòng:</strong>
+                        <button class="btn btn-sm btn-dark filter-btn active" onclick="filterRooms('all', this)">Tất cả</button>
+                        <button class="btn btn-sm btn-outline-success filter-btn" onclick="filterRooms('Trống', this)">Phòng Trống</button>
+                        <button class="btn btn-sm btn-outline-danger filter-btn" onclick="filterRooms('Đang thuê', this)">Đang Thuê</button>
+                        <button class="btn btn-sm btn-outline-warning filter-btn" onclick="filterRooms('Đang dọn', this)">Đang Dọn</button>
+                        <button class="btn btn-sm btn-outline-secondary filter-btn" onclick="filterRooms('Bảo trì', this)">Bảo Trì</button>
+                    </div>
+                </div>
+
+                <!-- ROOM GRID (CONTAINER NHÓM THEO TẦNG) -->
+                <div id="room-grid-container">
+                    <div class="text-center py-5 text-muted">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2">Đang tải sơ đồ phòng từ SQL Server...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: ĐẶT & THUÊ PHÒNG (RENTALS) -->
+            <div id="section-rentals" class="content-section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0">Danh Sách Phiếu Thuê & Đặt Phòng</h5>
+                    <button class="btn btn-primary" onclick="openNewRentalModal()">
+                        <i class="fa-solid fa-plus me-1"></i> Lập Phiếu Thuê Mới
+                    </button>
+                </div>
+
+                <div class="table-custom">
+                    <table class="table table-hover m-0">
+                        <thead>
+                            <tr>
+                                <th>Mã Phiếu</th>
+                                <th>Khách Hàng</th>
+                                <th>Phòng & Giá Áp Dụng</th>
+                                <th>Hình Thức</th>
+                                <th>Giờ Nhận</th>
+                                <th>Giờ Trả Dự Kiến</th>
+                                <th>Trạng Thái</th>
+                                <th>Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rentals-table-body">
+                            <tr><td colspan="8" class="text-center py-4 text-muted">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION 3: HÓA ĐƠN & THU TIỀN (INVOICES) -->
+            <div id="section-invoices" class="content-section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0">Danh Sách Hóa Đơn Khách Sạn</h5>
+                </div>
+                <div class="table-custom">
+                    <table class="table table-hover m-0">
+                        <thead>
+                            <tr>
+                                <th>Mã HĐ</th>
+                                <th>Mã Phiếu Thuê</th>
+                                <th>Ngày Lập</th>
+                                <th>Tiền Phòng</th>
+                                <th>Tiền Dịch Vụ</th>
+                                <th>Ưu Đãi</th>
+                                <th>Tổng Cộng (Gồm VAT)</th>
+                                <th>Trạng Thái</th>
+                                <th>Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoices-table-body">
+                            <tr><td colspan="9" class="text-center py-4 text-muted">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION 4: DỊCH VỤ KHÁCH SẠN (SERVICES) -->
+            <div id="section-services" class="content-section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold m-0">Danh Mục Dịch Vụ Khách Sạn</h5>
+                    <button class="btn btn-success" onclick="openUseServiceModal()">
+                        <i class="fa-solid fa-bell-concierge me-1"></i> Ghi Nhận Dùng Dịch Vụ
+                    </button>
+                </div>
+                <div class="table-custom">
+                    <table class="table table-hover m-0">
+                        <thead>
+                            <tr>
+                                <th>Mã DV</th>
+                                <th>Tên Dịch Vụ</th>
+                                <th>Đơn Giá</th>
+                                <th>Đơn Vị Tính</th>
+                                <th>Mô Tả</th>
+                            </tr>
+                        </thead>
+                        <tbody id="services-table-body">
+                            <tr><td colspan="5" class="text-center py-4 text-muted">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION 5: QUẢN LÝ KHÁCH HÀNG (CUSTOMERS) -->
+            <div id="section-customers" class="content-section d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3 gap-3">
+                    <div class="input-group" style="max-width: 380px;">
+                        <input type="text" id="customer-search-input" class="form-control" placeholder="Tìm theo Tên, CCCD hoặc SĐT..." onkeyup="searchCustomers()">
+                        <button class="btn btn-outline-secondary" onclick="searchCustomers()"><i class="fa-solid fa-search"></i></button>
+                    </div>
+                    <button class="btn btn-primary" onclick="openNewCustomerModal()">
+                        <i class="fa-solid fa-user-plus me-1"></i> Thêm Khách Hàng
+                    </button>
+                </div>
+                <div class="table-custom">
+                    <table class="table table-hover m-0">
+                        <thead>
+                            <tr>
+                                <th>Mã KH</th>
+                                <th>Họ & Tên</th>
+                                <th>Ngày Sinh</th>
+                                <th>Số CCCD</th>
+                                <th>Số Điện Thoại</th>
+                                <th>Địa Chỉ</th>
+                                <th>Hạng Thành Viên</th>
+                                <th>Ưu Đãi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-table-body">
+                            <tr><td colspan="8" class="text-center py-4 text-muted">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION 6: BÁO CÁO DOANH THU (REPORTS) -->
+            <div id="section-reports" class="content-section d-none">
+                <h5 class="fw-bold mb-3">Báo Cáo & Thống Kê Tổng Quan</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card p-4 border-0 shadow-sm text-center">
+                            <div class="text-muted small">Tổng Doanh Thu Đã Thu</div>
+                            <div class="fs-1 fw-bold text-success my-2" id="report-revenue">0 ₫</div>
+                            <div class="small text-muted">Từ các hóa đơn đã thanh toán</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card p-4 border-0 shadow-sm text-center">
+                            <div class="text-muted small">Tổng Khách Hàng Đăng Ký</div>
+                            <div class="fs-1 fw-bold text-primary my-2" id="report-customers">40</div>
+                            <div class="small text-muted">Trong cơ sở dữ liệu</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card p-4 border-0 shadow-sm text-center">
+                            <div class="text-muted small">Tỷ Lệ Lấp Đầy Phòng</div>
+                            <div class="fs-1 fw-bold text-danger my-2" id="report-occupancy">0%</div>
+                            <div class="small text-muted" id="report-occupancy-detail">0 / 30 phòng đang có khách</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: LẬP PHIẾU THUÊ PHÒNG MỚI -->
+<div class="modal fade" id="modalRental" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-calendar-plus text-primary me-2"></i>Lập Phiếu Thuê Phòng Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNewRental" onsubmit="submitNewRental(event)">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Chọn Phòng</label>
+                            <select id="rental-room-select" class="form-select" required>
+                                <option value="">-- Chọn phòng còn trống --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Khách Hàng</label>
+                            <select id="rental-customer-select" class="form-select" required>
+                                <option value="">-- Chọn khách hàng --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Hình Thức Thuê</label>
+                            <select id="rental-type-select" class="form-select">
+                                <option value="Theo ngày" selected>Theo ngày</option>
+                                <option value="Theo giờ">Theo giờ</option>
+                                <option value="Qua đêm">Qua đêm</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Số Người Dự Kiến</label>
+                            <input type="number" id="rental-guests" class="form-control" value="1" min="1" max="10">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Ghi Chú</label>
+                            <input type="text" id="rental-notes" class="form-control" placeholder="Yêu cầu đặc biệt...">
+                        </div>
+                    </div>
+                    <div class="modal-footer px-0 pb-0 mt-4">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary fw-bold px-4">Xác Nhận Thuê Phòng</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: THÊM KHÁCH HÀNG MỚI -->
+<div class="modal fade" id="modalCustomer" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-plus text-primary me-2"></i>Thêm Khách Hàng Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNewCustomer" onsubmit="submitNewCustomer(event)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Họ và Tên</label>
+                        <input type="text" id="cust-name" class="form-control" placeholder="Nguyễn Văn A" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ngày Sinh (phải đủ 18 tuổi)</label>
+                        <input type="date" id="cust-dob" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Số CCCD (12 chữ số)</label>
+                        <input type="text" id="cust-cccd" class="form-control" maxlength="12" pattern="[0-9]{12}" placeholder="079..." required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Số Điện Thoại</label>
+                        <input type="tel" id="cust-phone" class="form-control" placeholder="0901234567">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Địa Chỉ</label>
+                        <input type="text" id="cust-address" class="form-control" placeholder="TP. Hồ Chí Minh">
+                    </div>
+                    <div class="modal-footer px-0 pb-0 mt-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary fw-bold">Lưu Khách Hàng</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: GHI NHẬN DÙNG DỊCH VỤ -->
+<div class="modal fade" id="modalService" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="fa-solid fa-concierge-bell text-success me-2"></i>Ghi Nhận Sử Dụng Dịch Vụ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formUseService" onsubmit="submitUseService(event)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Chọn Phiếu Thuê / Phòng Đang Ở</label>
+                        <select id="service-rental-select" class="form-select" required>
+                            <option value="">-- Chọn phiếu thuê --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Chọn Dịch Vụ</label>
+                        <select id="service-item-select" class="form-select" required>
+                            <option value="">-- Chọn dịch vụ --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Số Lượng</label>
+                        <input type="number" id="service-quantity" class="form-control" value="1" min="1" required>
+                    </div>
+                    <div class="modal-footer px-0 pb-0 mt-3">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success fw-bold">Xác Nhận Thêm Dịch Vụ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 & SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Custom API client -->
+<script src="js/api.js"></script>
+
+<!-- Main Dashboard Logic -->
+<script>
+let allRooms = [];
+let allRentals = [];
+let allCustomers = [];
+let allServices = [];
+
+// Khởi chạy khi load trang
+document.addEventListener('DOMContentLoaded', () => {
+    loadDashboard();
+});
+
+// Chuyển tab giao diện
+function switchSection(section) {
+    document.querySelectorAll('.content-section').forEach(el => el.classList.add('d-none'));
+    document.querySelectorAll('.sidebar .nav-link').forEach(el => el.classList.remove('active'));
+
+    const targetEl = document.getElementById(`section-${section}`);
+    if (targetEl) targetEl.classList.remove('d-none');
+
+    // Cập nhật title
+    const titles = {
+        'dashboard': 'Sơ Đồ Phòng',
+        'rentals': 'Đặt & Thuê Phòng',
+        'invoices': 'Hóa Đơn & Thu Tiền',
+        'services': 'Dịch Vụ Khách Sạn',
+        'customers': 'Quản Lý Khách Hàng',
+        'reports': 'Báo Cáo Doanh Thu'
+    };
+    document.getElementById('page-title').innerText = titles[section] || 'Quản Lý Khách Sạn';
+
+    // Đánh dấu active sidebar
+    event.currentTarget.classList.add('active');
+
+    // Tải dữ liệu tương ứng
+    if (section === 'dashboard') loadDashboard();
+    else if (section === 'rentals') loadRentals();
+    else if (section === 'invoices') loadInvoices();
+    else if (section === 'services') loadServices();
+    else if (section === 'customers') loadCustomers();
+    else if (section === 'reports') loadReports();
+}
+
+// 1. Tải Sơ đồ phòng
+async function loadDashboard() {
+    try {
+        const [rooms, stats] = await Promise.all([
+            RoomAPI.getAll(),
+            StatsAPI.getSummary()
+        ]);
+        allRooms = rooms;
+
+        // Cập nhật KPI
+        document.getElementById('kpi-total-rooms').innerText = stats.tong_phong;
+        document.getElementById('kpi-empty-rooms').innerText = stats.phong_trong;
+        document.getElementById('kpi-rented-rooms').innerText = stats.phong_dang_thue;
+        document.getElementById('kpi-cleaning-rooms').innerText = `${stats.phong_dang_don} / ${stats.phong_bao_tri}`;
+
+        renderRooms(allRooms);
+    } catch (err) {
+        Swal.fire('Lỗi kết nối', err.message, 'error');
+    }
+}
+
+function renderRooms(rooms) {
+    const container = document.getElementById('room-grid-container');
+    if (!rooms.length) {
+        container.innerHTML = '<div class="alert alert-info text-center py-4">Không tìm thấy phòng nào phù hợp bộ lọc.</div>';
+        return;
+    }
+
+    // Nhóm theo tầng
+    const byFloor = {};
+    rooms.forEach(r => {
+        if (!byFloor[r.Tang]) byFloor[r.Tang] = [];
+        byFloor[r.Tang].push(r);
+    });
+
+    let html = '';
+    const sortedFloors = Object.keys(byFloor).sort((a,b) => a - b);
+
+    sortedFloors.forEach(floor => {
+        html += `
+            <div class="floor-title">
+                <i class="fa-solid fa-layer-group text-primary"></i> Tầng ${floor} (${byFloor[floor].length} phòng)
+            </div>
+            <div class="row g-3 mb-4">
+        `;
+
+        byFloor[floor].forEach(r => {
+            let statusClass = 'status-trong';
+            let badgeBg = 'bg-success';
+            let actionButtons = '';
+
+            if (r.TinhTrang === 'Đang thuê') {
+                statusClass = 'status-thue';
+                badgeBg = 'bg-danger';
+                actionButtons = `
+                    <div class="small mb-1">Khách: <strong>${r.KhachHienTai || '—'}</strong></div>
+                    <div class="d-flex gap-1 mt-2">
+                        <button class="btn btn-sm btn-outline-danger flex-fill" onclick="checkOut('${r.MaPhieuThue}')">
+                            <i class="fa-solid fa-sign-out-alt me-1"></i>Trả phòng
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" title="Thêm dịch vụ" onclick="openUseServiceModal('${r.MaPhieuThue}')">
+                            <i class="fa-solid fa-plus"></i> DV
+                        </button>
+                    </div>
+                `;
+            } else if (r.TinhTrang === 'Trống') {
+                statusClass = 'status-trong';
+                badgeBg = 'bg-success';
+                actionButtons = `
+                    <div class="d-flex gap-1 mt-2">
+                        <button class="btn btn-sm btn-success flex-fill" onclick="openNewRentalModal('${r.MaPhong}')">
+                            <i class="fa-solid fa-calendar-plus me-1"></i>Đặt phòng
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" title="Báo bảo trì" onclick="changeStatus('${r.MaPhong}', 'Bảo trì')">
+                            <i class="fa-solid fa-wrench"></i>
+                        </button>
+                    </div>
+                `;
+            } else if (r.TinhTrang === 'Đang dọn') {
+                statusClass = 'status-don';
+                badgeBg = 'bg-warning text-dark';
+                actionButtons = `
+                    <button class="btn btn-sm btn-warning fw-bold w-100 mt-2" onclick="changeStatus('${r.MaPhong}', 'Trống')">
+                        <i class="fa-solid fa-check me-1"></i>Dọn xong → Trống
+                    </button>
+                `;
+            } else {
+                statusClass = 'status-bt';
+                badgeBg = 'bg-secondary';
+                actionButtons = `
+                    <button class="btn btn-sm btn-secondary w-100 mt-2" onclick="changeStatus('${r.MaPhong}', 'Trống')">
+                        <i class="fa-solid fa-wrench me-1"></i>Bảo trì xong → Trống
+                    </button>
+                `;
+            }
+
+            html += `
+                <div class="col-12 col-md-6 col-xl-4 col-xxl-3">
+                    <div class="card room-card h-100 ${statusClass}">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fs-4 fw-bold">P.${r.SoPhong}</span>
+                                <span class="badge ${badgeBg}">${r.TinhTrang}</span>
+                            </div>
+                            <div class="small text-muted">${r.TenLoaiPhong || 'Tiêu chuẩn'} · Tối đa ${r.SucChua || 2} người</div>
+                            <div class="small fw-semibold text-primary mb-2">${formatMoney(r.DonGiaTheoNgay)} / ngày</div>
+                            ${actionButtons}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+// Lọc phòng
+function filterRooms(status, btn = null) {
+    if (btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    if (status === 'all') {
+        renderRooms(allRooms);
+    } else {
+        const filtered = allRooms.filter(r => r.TinhTrang === status);
+        renderRooms(filtered);
+    }
+}
+
+// Đổi trạng thái phòng
+async function changeStatus(maPhong, newStatus) {
+    try {
+        await RoomAPI.updateStatus(maPhong, newStatus);
+        Swal.fire({
+            icon: 'success',
+            title: 'Thành công',
+            text: `Đã chuyển phòng ${maPhong} sang '${newStatus}'`,
+            timer: 1200,
+            showConfirmButton: false
+        });
+        loadDashboard();
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+// 2. Quản lý Phiếu thuê
+async function loadRentals() {
+    try {
+        const rentals = await RentalAPI.getAll();
+        allRentals = rentals;
+        const tbody = document.getElementById('rentals-table-body');
+        if (!rentals.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">Chưa có phiếu thuê nào.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rentals.map(pt => {
+            const ct = pt.ChiTiet && pt.ChiTiet[0] ? pt.ChiTiet[0] : null;
+            const phongStr = ct ? `P.${ct.SoPhong || ct.MaPhong} (${formatMoney(ct.DonGiaApDung)})` : '—';
+            const hinhThuc = ct ? ct.HinhThucThue : 'Theo ngày';
+            const gioNhan = ct ? formatDateTime(ct.GioNhan) : '—';
+            const gioTra = ct ? formatDateTime(ct.GioTraDuKien) : '—';
+
+            let badgeStatus = 'bg-success';
+            if (pt.TrangThai === 'Hoàn tất') badgeStatus = 'bg-secondary';
+            else if (pt.TrangThai === 'Đã hủy') badgeStatus = 'bg-danger';
+
+            return `
+                <tr>
+                    <td class="fw-bold">${pt.MaPhieuThue}</td>
+                    <td>${pt.TenKhachHang || pt.MaKH}</td>
+                    <td>${phongStr}</td>
+                    <td><span class="badge bg-light text-dark border">${hinhThuc}</span></td>
+                    <td class="small">${gioNhan}</td>
+                    <td class="small">${gioTra}</td>
+                    <td><span class="badge ${badgeStatus}">${pt.TrangThai}</span></td>
+                    <td>
+                        ${pt.TrangThai === 'Đang thuê' ? `
+                            <button class="btn btn-sm btn-outline-danger" onclick="checkOut('${pt.MaPhieuThue}')">
+                                <i class="fa-solid fa-sign-out-alt me-1"></i>Trả phòng
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="createInvoice('${pt.MaPhieuThue}')">
+                                <i class="fa-solid fa-receipt me-1"></i>Xuất HĐ
+                            </button>
+                        ` : `
+                            <button class="btn btn-sm btn-outline-secondary" onclick="createInvoice('${pt.MaPhieuThue}')">
+                                <i class="fa-solid fa-receipt me-1"></i>Xem HĐ
+                            </button>
+                        `}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+// Mở Modal đặt phòng
+async function openNewRentalModal(preselectRoom = '') {
+    try {
+        const [rooms, customers] = await Promise.all([
+            RoomAPI.getAll(),
+            CustomerAPI.getAll()
+        ]);
+
+        const roomSelect = document.getElementById('rental-room-select');
+        const emptyRooms = rooms.filter(r => r.TinhTrang === 'Trống' || r.MaPhong === preselectRoom);
+        roomSelect.innerHTML = emptyRooms.map(r => `
+            <option value="${r.MaPhong}" ${r.MaPhong === preselectRoom ? 'selected' : ''}>
+                Phòng ${r.SoPhong} (${r.TenLoaiPhong} - ${formatMoney(r.DonGiaTheoNgay)}/ngày)
+            </option>
+        `).join('');
+
+        const custSelect = document.getElementById('rental-customer-select');
+        custSelect.innerHTML = customers.map(c => `
+            <option value="${c.MaKH}">${c.HoTen} - CCCD: ${c.CCCD} (${c.TenLoaiKH || 'Thường'})</option>
+        `).join('');
+
+        const modal = new bootstrap.Modal(document.getElementById('modalRental'));
+        modal.show();
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+async function submitNewRental(e) {
+    e.preventDefault();
+    const data = {
+        MaPhong: document.getElementById('rental-room-select').value,
+        MaKH: document.getElementById('rental-customer-select').value,
+        HinhThucThue: document.getElementById('rental-type-select').value,
+        SoNguoiDuKien: parseInt(document.getElementById('rental-guests').value) || 1,
+        GhiChu: document.getElementById('rental-notes').value
+    };
+
+    try {
+        await RentalAPI.create(data);
+        bootstrap.Modal.getInstance(document.getElementById('modalRental')).hide();
+        Swal.fire('Thành công', 'Đã tạo phiếu thuê và nhận phòng thành công!', 'success');
+        loadDashboard();
+        loadRentals();
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+// Trả phòng
+async function checkOut(maPT) {
+    const confirm = await Swal.fire({
+        title: 'Xác nhận trả phòng?',
+        text: `Bạn có chắc muốn trả phòng cho phiếu thuê ${maPT}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Đồng ý trả phòng',
+        cancelButtonText: 'Hủy'
+    });
+
+    if (confirm.isConfirmed) {
+        try {
+            await RentalAPI.checkOut(maPT);
+            Swal.fire('Hoàn tất', `Đã trả phòng phiếu ${maPT}. Phòng đã được chuyển sang trạng thái "Đang dọn".`, 'success');
+            loadDashboard();
+            loadRentals();
+        } catch (err) {
+            Swal.fire('Lỗi', err.message, 'error');
+        }
+    }
+}
+
+// 3. Quản lý Hóa đơn
+async function loadInvoices() {
+    try {
+        const invoices = await InvoiceAPI.getAll();
+        const tbody = document.getElementById('invoices-table-body');
+        if (!invoices.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">Chưa có hóa đơn nào.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = invoices.map(h => {
+            const isPaid = h.TrangThai === 'Đã thanh toán';
+            return `
+                <tr>
+                    <td class="fw-bold text-primary">${h.MaHD}</td>
+                    <td>${h.MaPhieuThue}</td>
+                    <td class="small">${formatDateTime(h.NgayLap)}</td>
+                    <td>${formatMoney(h.TienPhong)}</td>
+                    <td>${formatMoney(h.TienDichVu)}</td>
+                    <td class="text-success">${formatMoney(h.UuDai)}</td>
+                    <td class="fw-bold fs-6 text-dark">${formatMoney(h.TongTien)}</td>
+                    <td><span class="badge ${isPaid ? 'bg-success' : 'bg-danger'}">${h.TrangThai}</span></td>
+                    <td>
+                        ${!isPaid ? `
+                            <button class="btn btn-sm btn-success" onclick="payInvoice('${h.MaHD}')">
+                                <i class="fa-solid fa-credit-card me-1"></i>Thanh toán
+                            </button>
+                        ` : `
+                            <span class="text-muted small"><i class="fa-solid fa-check-circle text-success me-1"></i>Đã xong</span>
+                        `}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+async function createInvoice(maPT) {
+    try {
+        const inv = await InvoiceAPI.generate(maPT);
+        Swal.fire({
+            title: `Hóa đơn ${inv.MaHD}`,
+            html: `
+                <div class="text-start p-2">
+                    <p><strong>Mã Phiếu:</strong> ${inv.MaPhieuThue}</p>
+                    <p><strong>Tiền phòng:</strong> ${formatMoney(inv.TienPhong)}</p>
+                    <p><strong>Tiền dịch vụ:</strong> ${formatMoney(inv.TienDichVu)}</p>
+                    <p><strong>Ưu đãi thành viên:</strong> -${formatMoney(inv.UuDai)}</p>
+                    <p><strong>Thuế VAT (10%):</strong> +10%</p>
+                    <hr>
+                    <h5 class="fw-bold text-danger">TỔNG TIỀN: ${formatMoney(inv.TongTien)}</h5>
+                </div>
+            `,
+            icon: 'info',
+            confirmButtonText: 'Đóng'
+        });
+        loadInvoices();
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+async function payInvoice(maHD) {
+    try {
+        await InvoiceAPI.pay(maHD);
+        Swal.fire('Thành công', `Hóa đơn ${maHD} đã thanh toán thành công!`, 'success');
+        loadInvoices();
+        loadReports();
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+// 4. Quản lý Dịch vụ
+async function loadServices() {
+    try {
+        const services = await ServiceAPI.getAll();
+        allServices = services;
+        const tbody = document.getElementById('services-table-body');
+        tbody.innerHTML = services.map(s => `
+            <tr>
+                <td class="fw-bold">${s.MaDichVu}</td>
+                <td class="fw-semibold">${s.TenDichVu}</td>
+                <td class="text-primary fw-bold">${formatMoney(s.DonGia)}</td>
+                <td><span class="badge bg-light text-dark border">${s.DonViTinh}</span></td>
+                <td class="small text-muted">${s.MoTa || '—'}</td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+async function openUseServiceModal(preselectPT = '') {
+    try {
+        const [services, rentals] = await Promise.all([
+            ServiceAPI.getAll(),
+            RentalAPI.getAll('Đang thuê')
+        ]);
+
+        const ptSelect = document.getElementById('service-rental-select');
+        if (!rentals.length) {
+            Swal.fire('Thông báo', 'Hiện không có phòng nào đang thuê để gọi dịch vụ.', 'info');
+            return;
+        }
+
+        ptSelect.innerHTML = rentals.map(r => `
+            <option value="${r.MaPhieuThue}" ${r.MaPhieuThue === preselectPT ? 'selected' : ''}>
+                Phiếu ${r.MaPhieuThue} (${r.TenKhachHang} - ${r.ChiTiet && r.ChiTiet[0] ? 'P.' + r.ChiTiet[0].SoPhong : ''})
+            </option>
+        `).join('');
+
+        const sSelect = document.getElementById('service-item-select');
+        sSelect.innerHTML = services.map(s => `
+            <option value="${s.MaDichVu}">${s.TenDichVu} - ${formatMoney(s.DonGia)} / ${s.DonViTinh}</option>
+        `).join('');
+
+        const modal = new bootstrap.Modal(document.getElementById('modalService'));
+        modal.show();
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+async function submitUseService(e) {
+    e.preventDefault();
+    const data = {
+        MaPhieuThue: document.getElementById('service-rental-select').value,
+        MaDichVu: document.getElementById('service-item-select').value,
+        SoLuong: parseInt(document.getElementById('service-quantity').value) || 1
+    };
+
+    try {
+        const res = await ServiceAPI.use(data);
+        bootstrap.Modal.getInstance(document.getElementById('modalService')).hide();
+        Swal.fire('Thành công', res.message, 'success');
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+// 5. Quản lý Khách hàng
+async function loadCustomers(keyword = '') {
+    try {
+        const customers = await CustomerAPI.getAll(keyword);
+        allCustomers = customers;
+        const tbody = document.getElementById('customers-table-body');
+        if (!customers.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">Không tìm thấy khách hàng.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = customers.map(c => `
+            <tr>
+                <td class="fw-bold">${c.MaKH}</td>
+                <td class="fw-semibold">${c.HoTen}</td>
+                <td>${c.NgaySinh}</td>
+                <td><code>${c.CCCD}</code></td>
+                <td>${c.SDT || '—'}</td>
+                <td class="small">${c.DiaChi || '—'}</td>
+                <td><span class="badge bg-info text-dark">${c.TenLoaiKH || 'Thường'}</span></td>
+                <td class="text-success fw-bold">${c.PhanTramUuDai || 0}%</td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+function searchCustomers() {
+    const kw = document.getElementById('customer-search-input').value;
+    loadCustomers(kw);
+}
+
+function openNewCustomerModal() {
+    new bootstrap.Modal(document.getElementById('modalCustomer')).show();
+}
+
+async function submitNewCustomer(e) {
+    e.preventDefault();
+    const data = {
+        HoTen: document.getElementById('cust-name').value,
+        NgaySinh: document.getElementById('cust-dob').value,
+        CCCD: document.getElementById('cust-cccd').value,
+        SDT: document.getElementById('cust-phone').value,
+        DiaChi: document.getElementById('cust-address').value
+    };
+
+    try {
+        await CustomerAPI.create(data);
+        bootstrap.Modal.getInstance(document.getElementById('modalCustomer')).hide();
+        Swal.fire('Thành công', 'Đã thêm khách hàng mới thành công!', 'success');
+        document.getElementById('formNewCustomer').reset();
+        loadCustomers();
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+// 6. Báo cáo Doanh thu
+async function loadReports() {
+    try {
+        const stats = await StatsAPI.getSummary();
+        document.getElementById('report-revenue').innerText = formatMoney(stats.doanh_thu_thang);
+        document.getElementById('report-customers').innerText = stats.tong_khach_hang;
+
+        const rate = stats.tong_phong ? Math.round((stats.phong_dang_thue / stats.tong_phong) * 100) : 0;
+        document.getElementById('report-occupancy').innerText = `${rate}%`;
+        document.getElementById('report-occupancy-detail').innerText = `${stats.phong_dang_thue} / ${stats.tong_phong} phòng đang có khách`;
+    } catch (err) {
+        Swal.fire('Lỗi', err.message, 'error');
+    }
+}
+
+function logout() {
+    Swal.fire({
+        title: 'Đăng xuất?',
+        text: 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Đăng xuất',
+        cancelButtonText: 'Ở lại'
+    }).then(res => {
+        if (res.isConfirmed) {
+            window.location.href = 'login.html';
+        }
+    });
+}
+</script>
+
+</body>
+</html>
+
